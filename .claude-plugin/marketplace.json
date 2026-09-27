@@ -1,0 +1,14 @@
+{
+  "name": "aqteron",
+  "description": "Aqteron plugins for creating and publishing apps",
+  "owner": {
+    "name": "Aqteron"
+  },
+  "plugins": [
+    {
+      "name": "aqteron",
+      "source": "./plugins/aqteron",
+      "description": "Create, validate, publish and update apps in your Aqteron account."
+    }
+  ]
+}

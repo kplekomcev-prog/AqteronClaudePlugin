@@ -1,0 +1,9 @@
+{
+  "name": "aqteron",
+  "version": "0.1.0",
+  "description": "Создание, проверка и публикация приложений в вашем аккаунте Aqteron.",
+  "author": { "name": "Aqteron", "url": "https://aqteron.com" },
+  "homepage": "https://aqteron.com",
+  "license": "UNLICENSED",
+  "keywords": ["aqteron", "pwa", "publish", "mcp"]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aqteron": {
+      "type": "http",
+      "url": "https://aqteron.com/mcp"
+    }
+  }
+}
