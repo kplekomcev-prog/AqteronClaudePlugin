@@ -1,6 +1,6 @@
 {
   "name": "aqteron",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Создание, проверка и публикация приложений в вашем аккаунте Aqteron.",
   "author": {
     "name": "EIREEN Tech",
@@ -14,5 +14,6 @@
     "pwa",
     "publish",
     "mcp"
-  ]
+  ],
+  "privacyPolicyUrl": "https://aqteron.com/privacy"
 }

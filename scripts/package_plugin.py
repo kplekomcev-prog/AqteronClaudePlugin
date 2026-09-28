@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Reproduce the reviewed 0.1.1 ZIP with Python's standard library."""
+"""Reproduce the reviewed 0.1.2 ZIP with Python's standard library."""
 import argparse
 import hashlib
 import pathlib
 import zipfile
 
-EXPECTED = "711d24d1810a5a179a9cedd3276ce6191cdf29ca0c45413881f38a51a8d02527"
-FILES = [".claude-plugin/plugin.json", ".mcp.json", "README.md", "skills/publish-aqteron-app/SKILL.md", "skills/publish-aqteron-app/scripts/zip_chunks.py"]
+EXPECTED = "d23028a38246af415ddfd31f6320e9fa63cbbd48c6c5f3d39fb4c77b7cd918fe"
+FILES = [".claude-plugin/icon.svg", ".claude-plugin/plugin.json", ".mcp.json", "README.md", "skills/publish-aqteron-app/SKILL.md", "skills/publish-aqteron-app/scripts/zip_chunks.py"]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
