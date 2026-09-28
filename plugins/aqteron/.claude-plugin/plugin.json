@@ -1,9 +1,18 @@
 {
   "name": "aqteron",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Создание, проверка и публикация приложений в вашем аккаунте Aqteron.",
-  "author": { "name": "Aqteron", "url": "https://aqteron.com" },
+  "author": {
+    "name": "EIREEN Tech",
+    "email": "contact@aqteron.com",
+    "url": "https://aqteron.com"
+  },
   "homepage": "https://aqteron.com",
   "license": "UNLICENSED",
-  "keywords": ["aqteron", "pwa", "publish", "mcp"]
+  "keywords": [
+    "aqteron",
+    "pwa",
+    "publish",
+    "mcp"
+  ]
 }

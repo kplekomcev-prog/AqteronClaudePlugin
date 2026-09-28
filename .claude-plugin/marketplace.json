@@ -2,7 +2,8 @@
   "name": "aqteron",
   "description": "Aqteron plugins for creating and publishing apps",
   "owner": {
-    "name": "Aqteron"
+    "name": "EIREEN Tech",
+    "email": "contact@aqteron.com"
   },
   "plugins": [
     {
