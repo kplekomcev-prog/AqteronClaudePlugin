@@ -34,7 +34,7 @@ You can revoke access in [AI connections](https://aqteron.com/cabinet/connection
 
 The plugin declares one remote service: `https://aqteron.com/mcp`. It provides platform instructions and, after OAuth authorization, your app metadata, ZIP uploads and publication results. The included Python helper reads a ZIP locally and emits chunks; it contains no network client. The plugin has no separate telemetry endpoint. Claude's own data processing is governed by your agreement with Anthropic.
 
-For setup problems, see the installation guide. Report reproducible non-sensitive issues in this repository. Never post passwords, tokens, cookies, private app ZIPs or user data in public issues. A formal service privacy policy and private security contact must be confirmed by the owner before directory submission; this paragraph is a technical description, not that policy.
+For setup problems, see the installation guide. Report reproducible non-sensitive issues in this repository. Never post passwords, tokens, cookies, private app ZIPs or user data in public issues. Aqteron is operated by EIREEN Tech (France). Read the [privacy policy](https://aqteron.com/privacy), also available in [Russian](https://aqteron.com/privacy?lang=ru) and [French](https://aqteron.com/privacy?lang=fr). For support, privacy requests or non-public security reports, email [contact@aqteron.com](mailto:contact@aqteron.com).
 
 ## Release integrity
 
@@ -45,3 +45,4 @@ For setup problems, see the installation guide. Report reproducible non-sensitiv
 - Marketplace name: `aqteron`.
 
 The plugin retains its original `UNLICENSED` designation. No additional open-source license is granted by this distribution.
+
