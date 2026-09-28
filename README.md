@@ -2,7 +2,7 @@
 
 Create, validate, publish and update applications in your own [Aqteron](https://aqteron.com) account from Claude. This repository contains only the client plugin and a Claude Code marketplace. Aqteron's server is hosted remotely.
 
-**Preview 0.1.2.** Server-side OAuth, ZIP transfer, publication and update checks have passed. Installation and the complete workflow in a real Claude account still require verification. This is not an Anthropic directory listing or endorsement.
+**Preview 0.1.3.** Server-side OAuth, ZIP transfer, publication and update checks have passed. Installation and the complete workflow in a real Claude account still require verification. This is not an Anthropic directory listing or endorsement.
 
 ## Install in Claude
 
@@ -38,11 +38,13 @@ For setup problems, see the installation guide. Report reproducible non-sensitiv
 
 ## Release integrity
 
-- Download: [aqteron-claude-0.1.2.zip](https://aqteron.com/cabinet/downloads/aqteron-claude-0.1.2.zip)
-- Size: 8,063 bytes; six files.
-- SHA-256: `d23028a38246af415ddfd31f6320e9fa63cbbd48c6c5f3d39fb4c77b7cd918fe`
+- Download: [aqteron-claude-0.1.3.zip](https://aqteron.com/cabinet/downloads/aqteron-claude-0.1.3.zip)
+- Size: 8,188 bytes; six files.
+- SHA-256: `54a15d05baf782797d8c308fa0b91317b40b2b3c952d02a56e7fdff3916c1357`
 - Plugin path for directory submission: `plugins/aqteron`.
 - Marketplace name: `aqteron`.
 
 The plugin retains its original `UNLICENSED` designation. No additional open-source license is granted by this distribution.
 
+
+[Support](https://aqteron.com/support) · [Terms of service](https://aqteron.com/terms)

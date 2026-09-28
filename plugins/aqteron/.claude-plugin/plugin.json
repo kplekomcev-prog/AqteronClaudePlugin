@@ -1,6 +1,6 @@
 {
   "name": "aqteron",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Создание, проверка и публикация приложений в вашем аккаунте Aqteron.",
   "author": {
     "name": "EIREEN Tech",
@@ -15,5 +15,9 @@
     "publish",
     "mcp"
   ],
-  "privacyPolicyUrl": "https://aqteron.com/privacy"
+  "privacyPolicyUrl": "https://aqteron.com/privacy",
+  "supportUrl": "https://aqteron.com/support",
+  "documentationUrl": "https://aqteron.com/cabinet/connections/claude?lang=en",
+  "repository": "https://github.com/kplekomcev-prog/AqteronClaudePlugin",
+  "termsOfServiceUrl": "https://aqteron.com/terms"
 }
