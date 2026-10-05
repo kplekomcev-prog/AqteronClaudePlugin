@@ -1,7 +1,7 @@
 {
   "name": "aqteron",
-  "version": "0.1.5",
-  "description": "Создание, проверка и публикация приложений в вашем аккаунте Aqteron.",
+  "version": "0.1.6",
+  "description": "Create, validate, publish and safely update applications in your Aqteron account.",
   "author": {
     "name": "EIREEN Tech",
     "email": "contact@aqteron.com",
