@@ -1,66 +1,100 @@
-# Aqteron для Claude · 0.1.5
+# Aqteron for Claude · 0.1.6
 
-Плагин помогает создавать, проверять, публиковать и обновлять приложения в вашем аккаунте Aqteron. Claude получает действующие правила и доступные возможности через MCP, собирает ZIP и передаёт его в Aqteron. Для публикации используется обычная проверка пакета и прав аккаунта.
+Aqteron lets Claude create, validate, publish and update applications in your Aqteron account. Claude reads the current platform instructions and capabilities through MCP, builds a ZIP package, validates it with Aqteron and publishes only when you ask.
 
-Начиная с 0.1.4, для создания и изменения приложений Claude обязан использовать серверный specialist workflow Aqteron: получить профильных специалистов на стадиях planning, design, implementation и verification, выполнить применимые acceptance checks и только после этого собирать и отправлять ZIP.
+Version 0.1.6 keeps the 0.1.5 retained-source update workflow and makes the plugin package fully English for Anthropic Directory presentation.
 
-В 0.1.5 добавлена полноценная работа с уже опубликованными приложениями: Claude может получить историю версий, выбрать конкретную сохранённую версию и восстановить исходный ZIP через `list_app_versions`, `get_app_source_zip` и `get_app_source_chunk`. Перед изменением ZIP проверяются размер и SHA-256; старые файлы приложения не должны пересоздаваться по памяти.
+## Install in Claude
 
-## Установка в Claude
+1. Open **Customize → Plugins → Add → Upload plugin** and select `aqteron-claude-0.1.6.zip`.
+2. Open the plugin's **Connectors** tab, choose **Aqteron**, and select **Connect**. The MCP server is `https://aqteron.com/mcp`.
+3. Sign in to your Aqteron account and authorize access. Enter your password only on Aqteron.
+4. Start a new Claude conversation after updating the plugin. A simple first request is: **Show my apps in Aqteron.**
 
-1. Откройте **Customize → Plugins → Add → Upload plugin** и выберите `aqteron-claude-0.1.5.zip`.
-2. Откройте вкладку **Connectors** установленного плагина, выберите Aqteron и нажмите **Connect**. Адрес сервера: `https://aqteron.com/mcp`.
-3. Войдите в нужный аккаунт Aqteron и разрешите подключение. Пароль вводится только на сайте Aqteron.
-4. Начните новую беседу после обновления плагина и попросите: «Покажи мои приложения в Aqteron». Для проверки обновления существующего приложения можно попросить показать его версии.
-
-Названия пунктов и доступность загрузки плагинов зависят от версии Claude и настроек организации. Если загрузка плагинов недоступна, добавьте **custom connector** с тем же MCP-адресом. Для сборки и передачи ZIP нужны инструменты выполнения кода и доступа к файлам.
+Plugin upload availability depends on your Claude account and organization settings. If plugin upload is unavailable, you can add a custom connector using the same MCP endpoint. Creating and transferring ZIP files also requires code execution and file access in Claude.
 
 ## Claude Code
 
-Распакуйте архив и запустите `claude --plugin-dir /absolute/path/aqteron-claude`. Через `/mcp` выберите Aqteron и пройдите вход. Для проверки структуры: `claude plugin validate /absolute/path/aqteron-claude --strict`.
+Install from the Aqteron marketplace:
+
+```sh
+claude plugin marketplace add kplekomcev-prog/AqteronClaudePlugin
+claude plugin install aqteron@aqteron
+```
+
+Then use `/mcp` to connect Aqteron and complete OAuth sign-in.
 
 ## Specialist workflow
 
-Для создания или изменения приложения нормальная последовательность:
+For application creation or code updates, Claude first reads `get_app_instructions` and follows the returned Aqteron specialist workflow.
 
-`get_app_instructions → get_specialist_instructions(planning) → design → implementation → verification → ZIP → Aqteron validation → publish`.
+When specialist preparation is required, Claude obtains task-specific instructions for:
 
-Набор специалистов определяется сервером Aqteron по задаче. Пользователь не должен вручную выбирать роли специалистов.
+1. planning
+2. design
+3. implementation
+4. verification
 
-Если `get_specialist_instructions` отсутствует, skill сначала пробует fallback через `get_app_instructions({ specialist_request: ... })`. Если и этот параметр отвергается старой схемой, Claude должен считать tool catalog устаревшим и не продолжать создание приложения до новой/обновлённой сессии.
+Applicable acceptance checks must be run against the exact packaged build before transfer. Missing tests must be reported as not run rather than treated as passed.
 
-## Обновление существующего приложения
+## Update an existing application
 
-Для обновления Claude сначала вызывает `list_apps`, затем `list_app_versions` для выбранного приложения. Исходник активной или явно выбранной версии получает через `get_app_source_zip`; если ZIP состоит из нескольких частей, последовательно вызывает `get_app_source_chunk` до `next_chunk_index = null`.
+For an existing Aqteron application, Claude should use retained source instead of rebuilding the application from memory.
 
-Полученные base64-части декодируются и объединяются строго по индексу. Перед распаковкой Claude обязан проверить точный размер и SHA-256 исходного ZIP. После изменения сохраняются package identity, совместимость данных и весь несвязанный функционал; новая версия загружается с `expected_version_id`, равным актуальной активной версии непосредственно перед upload.
+The normal update flow is:
 
-Если версия плагина или текущая Claude-сессия не видит этих инструментов, существующее приложение нельзя пересобирать по памяти. Нужно обновить/переподключить Aqteron и начать новую сессию либо использовать явно предоставленный пользователем исходный ZIP.
+1. Call `list_apps` and identify the intended owned app and its current `active_version_id`.
+2. Call `list_app_versions` and select the active version unless you explicitly requested another retained version.
+3. Call `get_app_source_zip` for that version. It returns source metadata and the first ZIP chunk.
+4. While `next_chunk_index` is not null, call `get_app_source_chunk` sequentially.
+5. Decode and concatenate the chunks in order.
+6. Verify the reconstructed ZIP byte size and SHA-256 against the server metadata.
+7. Unpack the verified source ZIP, preserve unrelated behavior, assets, data compatibility and package identity, then implement only the requested changes.
+8. Re-read the app immediately before upload. If the active version changed, stop and reconcile instead of overwriting a newer update.
+9. Upload the new package in update mode with the freshly observed `expected_version_id`.
 
-## Как работает передача
+If the current Claude session does not expose `list_app_versions`, `get_app_source_zip` or `get_app_source_chunk`, treat its MCP tool catalog as stale. Refresh or reconnect Aqteron, or start a new Claude session. Do not reconstruct an existing application from memory when retained source is available.
 
-MCP endpoint: `https://aqteron.com/mcp`, Streamable HTTP, OAuth с PKCE. Пользователь разрешает чтение правил, приложений и их версий, загрузку, публикацию и проверку статуса. Доступ отзывается в разделе подключений Aqteron.
+## ZIP transfer and publication
 
-Новый исходный ZIP для публикации передаётся через `begin_app_zip_upload`, `append_app_zip_chunk`, `complete_app_zip_upload`. Передача возобновляется, проверяет точный размер и SHA-256 и использует тот же валидатор, что существующая интеграция. Само завершение загрузки не публикует приложение; публикация — отдельный `deploy_app` по запросу пользователя.
+Generated ZIP files can be transferred through:
 
-Лимит ZIP — 10 MiB, часть — 24 KiB, незавершённая передача хранится час. У больших архивов существенный расход контекста и времени: лучше сохранять ресурсы компактными. Python 3 нужен только для вспомогательного чтения локального ZIP; MCP-сервер работает удалённо.
+- `begin_app_zip_upload`
+- `append_app_zip_chunk`
+- `complete_app_zip_upload`
 
-Плагин не содержит токенов и не требует ключа API. Автоматические проверки не заменяют реальную визуальную/устройственную проверку приложения: непроведённый тест нельзя отмечать как пройденный.
+The transfer verifies exact byte length and SHA-256 and runs the Aqteron package validator. Completing the upload does not publish the application.
 
-## Владелец, данные и поддержка
+Publication is a separate `deploy_app` action. After publication, Claude can use `get_deploy_status` until a terminal result is returned.
 
-Aqteron управляет **EIREEN Tech**, SAS, 102 628 047 R.C.S. Paris, 122 rue Amelot, 75011 Paris, France. Контакт: [contact@aqteron.com](mailto:contact@aqteron.com).
+The current ZIP limit is 10 MiB and the standard transfer chunk is 24 KiB.
 
-[Политика конфиденциальности](https://aqteron.com/privacy?lang=ru) · [Privacy policy](https://aqteron.com/privacy) · [Politique de confidentialité](https://aqteron.com/privacy?lang=fr).
+## Security and data handling
 
-Единственный удалённый сервис плагина — `https://aqteron.com/mcp`. После разрешения доступа он обрабатывает сведения о ваших приложениях, их сохранённых версиях, загруженные ZIP и результаты публикации. Локальный Python-помощник читает выбранный ZIP и не отправляет сетевые запросы.
+The plugin contains no Aqteron password, API key or shared account token.
 
-Отозвать подключение можно в [разделе AI-подключений Aqteron](https://aqteron.com/cabinet/connections/ai). Отключение не удаляет уже опубликованные приложения. Не включайте пароли, токены или личные исходные материалы в публичные файлы приложения.
+The only remote MCP service declared by the plugin is:
 
-**Privacy and support (English).** Aqteron is operated by EIREEN Tech (France). The plugin connects only to Aqteron's MCP service and processes authorized app metadata, retained version/source metadata, uploaded ZIP files and publication results. Read the [privacy policy](https://aqteron.com/privacy). Contact [contact@aqteron.com](mailto:contact@aqteron.com) for support, privacy requests and non-public security reports.
+`https://aqteron.com/mcp`
 
-## Распространение
+After OAuth authorization, Aqteron can provide the connected user's application metadata, retained version/source metadata, ZIP validation results and publication results. The bundled Python helper only reads local ZIP files and emits chunk data; it does not make network requests.
 
-Это установочный пакет для прямой загрузки и Claude Code marketplace. `UNLICENSED`: публичная лицензия на распространение кода этим пакетом не предоставляется.
+Published application links can be accessible to anyone who has the link. Do not include passwords, tokens or private source material in public application assets.
 
-[Поддержка](https://aqteron.com/support) · [Пользовательское соглашение](https://aqteron.com/terms)
+Access can be revoked from Aqteron's AI connections settings. Revoking the connector does not delete already published applications.
+
+## Privacy, support and legal
+
+Aqteron is operated by **EIREEN Tech**, SAS, 102 628 047 R.C.S. Paris, 122 rue Amelot, 75011 Paris, France.
+
+- [Privacy policy](https://aqteron.com/privacy)
+- [Terms of service](https://aqteron.com/terms)
+- [Support](https://aqteron.com/support)
+- Support and privacy contact: [contact@aqteron.com](mailto:contact@aqteron.com)
+- [English installation guide](https://aqteron.com/cabinet/connections/claude?lang=en)
+- [Russian installation guide](https://aqteron.com/cabinet/connections/claude?lang=ru)
+- [French installation guide](https://aqteron.com/cabinet/connections/claude?lang=fr)
+
+## Distribution
+
+This package is distributed for installation through Claude and the Aqteron Claude Code marketplace. It retains its `UNLICENSED` designation; no additional open-source license is granted by this package.
