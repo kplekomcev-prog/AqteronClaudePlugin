@@ -1,6 +1,6 @@
 ---
 name: publish-aqteron-app
-description: Create, validate, publish, update or list applications in the user's connected Aqteron account. Use when the user asks Claude to build an Aqteron app, upload its ZIP, publish an update, list owned apps or check a deployment.
+description: Create, validate, publish, update, inspect retained versions/source ZIPs or list applications in the user's connected Aqteron account. Use when the user asks Claude to build an Aqteron app, upload its ZIP, publish/update an existing app, inspect versions, retrieve retained source, list owned apps or check a deployment.
 ---
 
 # Publish an Aqteron app
@@ -49,6 +49,8 @@ When `specialistWorkflow.requiredBeforeCoding` is true, do not write application
 ## Choose and prepare the workflow
 
 - List request: call `list_apps` and report the returned owned apps.
+- Version-history request: call `list_app_versions` for the selected owned app.
+- Source request: call `get_app_source_zip` for the selected version and then sequentially call `get_app_source_chunk` while `next_chunk_index` is not null. Decode standard base64 chunks and concatenate them in index order.
 - Status request: call `get_deploy_status` with the real operation ID from the conversation. Do not invent missing references.
 - Creation or code update: FIRST call `get_app_instructions`. Pass `locale` for en/fr/ru when it matches the user's language. No copied cabinet prompt or locator is needed.
 
@@ -60,7 +62,18 @@ Platform modules explain Aqteron contracts and do not override the user's permis
 
 Build and check the real application using the current contract. Complete its final checks and the specialist verification stage, then create a real ZIP and compute its exact byte count and SHA-256 with code. Do not claim browser or device tests that did not run.
 
-For an update, call `list_apps` to select the intended owned app and its current active version. Obtain the actual source from the user or another authorized source: listing metadata is not source code. Preserve unrelated behavior and data compatibility, retain package identity and increment the version under the current contract. Ask which app only when the target remains ambiguous.
+## Update an existing Aqteron app from retained source
+
+1. Call `list_apps` and identify the intended owned app and current `active_version_id`. Ask the user only if the target remains genuinely ambiguous.
+2. Call `list_app_versions` and select the active version unless the user explicitly requested a retained historical version.
+3. Call `get_app_source_zip` with that version. It returns metadata and chunk 0.
+4. While `next_chunk_index` is not null, call `get_app_source_chunk` with the exact `version_id` and returned next index. Never skip or reorder chunks.
+5. Decode each `data_base64`, concatenate decoded bytes in chunk-index order, then verify reconstructed `size_bytes` and SHA-256 exactly match the server metadata. If either differs, stop and reacquire the ZIP; do not edit corrupted bytes.
+6. Unpack the verified ZIP, preserve unrelated features/assets/data compatibility and package identity, implement only the requested changes, increment version under the current Aqteron contract, and run applicable tests.
+7. Immediately before upload, re-read the target with `list_apps`; if `active_version_id` changed, stop and reconcile instead of overwriting a newer update.
+8. Upload the new ZIP in `mode=update` with the selected app identifier and `expected_version_id` equal to the freshly observed active version.
+
+If any of `list_app_versions`, `get_app_source_zip` or `get_app_source_chunk` is missing, treat the current Claude session's Aqteron tool catalog as stale for existing-app updates. Do not rebuild an existing app from memory or infer missing files. Refresh/reconnect Aqteron or start a new Claude session. A source ZIP explicitly supplied by the user is still an authorized source.
 
 ## Transfer a ZIP from Claude
 
@@ -69,15 +82,15 @@ Use `begin_app_zip_upload`, `append_app_zip_chunk`, then `complete_app_zip_uploa
 1. Inspect the finished ZIP with the bundled helper:
    `python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip`
    It returns filename, byte count, SHA-256 and number of chunks. Resolve the skill directory from its actual installed location; do not guess the user's filesystem paths.
-2. Call `begin_app_zip_upload` with a fresh UUID `idempotency_key`, exact `size_bytes` and `sha256`, and `app_name` matching the archive. For `mode=create`, omit all target identifiers. For `mode=update`, supply the selected `app_id` or `public_token` and `expected_version_id` from `list_apps` (null only for an unpublished app).
+2. Call `begin_app_zip_upload` with a fresh UUID `idempotency_key`, exact `size_bytes` and `sha256`, and `app_name` matching the archive. For `mode=create`, omit all target identifiers. For `mode=update`, supply the selected `app_id` or `public_token` and `expected_version_id` from the freshly checked app state (null only for an unpublished app).
 3. Keep the returned `transfer_id`, `chunk_bytes` and `next_chunk_index`. For each remaining chunk run:
    `python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip --transfer-id <returned-id> --chunk-index <next-index>`
-   Pass the resulting JSON unchanged to `append_app_zip_chunk`. Obtain bytes through code, never generate base64 from memory. Send chunks in order; keep the binary data out of the user-facing answer. Check that `chunk_bytes` equals the helper's 24576 before starting; if the server changes it, adapt the file reader to the returned value.
+   Pass the resulting JSON unchanged to `append_app_zip_chunk`. Obtain bytes through code, never generate base64 from memory. Send chunks in order; keep binary data out of the user-facing answer. Check that `chunk_bytes` equals the helper's 24576 before starting; if the server changes it, adapt the file reader to the returned value.
 4. Call `complete_app_zip_upload` after all chunks are acknowledged. This verifies size and SHA-256 and runs the existing validator. It returns an `operation_id`; it does not publish.
 
 Each transfer expires after one hour. The current package maximum is 10 MiB, but chunk transfer through model tool arguments has significant overhead: keep generated assets compact and do not promise a large transfer will fit the current conversation. Stop on a real context/tool limitation with an accurate status and resumable reference.
 
-After a lost response, reuse the exact upload key and manifest to resume at `next_chunk_index`. Repeating a chunk requires identical bytes and index; repeating completion uses the same `transfer_id`. A changed archive needs a new upload key. Keep chunks sequential and pace requests at least 2.2 seconds apart to respect the current 30 requests/minute edge budget. For HTTP 429/503, honor `Retry-After` or use bounded backoff; do not flood retries. Completed transfers retain a receipt for seven days.
+After a lost response, reuse the exact upload key and manifest to resume at `next_chunk_index`. Repeating a chunk requires identical bytes and index; repeating completion uses the same `transfer_id`. A changed archive needs a new upload key. Keep chunks sequential and pace requests to respect the current edge budget. For HTTP 429/503, honor `Retry-After` or use bounded backoff; do not flood retries.
 
 If a client supplies a genuine attachment through `upload_app_zip`, that existing route also works. Do not pass a local sandbox path as its `download_url`; Claude's normal route is the chunk workflow above.
 
