@@ -1,15 +1,15 @@
 # Aqteron for Claude
 
-Create, validate, publish and update applications in your own [Aqteron](https://aqteron.com) account from Claude. This repository contains only the client plugin and a Claude Code marketplace. Aqteron's server is hosted remotely.
+Create, validate, publish and update applications in your own [Aqteron](https://aqteron.com) account from Claude. This repository contains the installable client plugin and Claude Code marketplace; Aqteron's MCP server is hosted remotely.
 
-**Preview 0.1.4.** Server-side OAuth, ZIP transfer, publication/update checks and the Aqteron specialist workflow are supported. For application creation or modification, Claude must obtain specialist instructions for planning, design, implementation and verification before packaging or publishing. This is not an Anthropic directory listing or endorsement.
+**Preview 0.1.5.** Server-side OAuth, ZIP transfer, publication/update checks and the Aqteron specialist workflow are supported. Version 0.1.5 also supports retrieving retained application versions and exact source ZIPs before updating an existing app.
 
 ## Install in Claude
 
-1. Open the [installation guide](https://aqteron.com/cabinet/connections/claude?lang=en) and use the current plugin ZIP `aqteron-claude-0.1.4.zip`.
+1. Open the [installation guide](https://aqteron.com/cabinet/connections/claude?lang=en) and use the current plugin ZIP `aqteron-claude-0.1.5.zip`.
 2. In Claude, open **Customize → Plugins → Add → Upload plugin**, and upload the ZIP.
 3. In the plugin's **Connectors** tab, choose **Aqteron → Connect**. Sign in on Aqteron and authorize access to your own account.
-4. Start a **new conversation** after updating the plugin and ask: **Show my apps in Aqteron.**
+4. Start a **new conversation** after updating the plugin and ask: **Show my apps in Aqteron.** For an existing app, you can then ask Claude to show its retained versions before editing.
 
 [Русская инструкция](https://aqteron.com/cabinet/connections/claude?lang=ru) · [Guide français](https://aqteron.com/cabinet/connections/claude?lang=fr)
 
@@ -28,26 +28,28 @@ Start Claude Code and use `/mcp` to connect Aqteron. Each user signs into their 
 
 The workflow fetches current Aqteron instructions and the task-specific specialist plan before coding. When `specialistWorkflow.requiredBeforeCoding` is true, Claude calls `get_specialist_instructions` at planning, design, implementation and verification stages, executes applicable acceptance checks on the exact build, then generates a compatible app ZIP, uploads the actual file bytes, checks validation and publishes only when the user asks.
 
-If a Claude session has a stale MCP tool catalog without `get_specialist_instructions`, the skill tries the documented `specialist_request` fallback. If that schema is stale too, the plugin blocks generation until the connector/session is refreshed instead of silently skipping specialist preparation.
+For existing apps, version 0.1.5 first reads `list_app_versions`, reconstructs the exact retained source ZIP with `get_app_source_zip` and `get_app_source_chunk`, verifies size and SHA-256, then edits that source instead of rebuilding from memory. Before upload it rechecks the active version to protect against overwriting a newer update.
 
-Updates target an app owned by the signed-in user. A completed upload alone does not publish the app. The current ZIP limit is 10 MiB; smaller apps are more practical for chunked transfer.
+If a Claude session has a stale MCP tool catalog, the plugin stops at the affected workflow and asks for a refresh/reconnect or a new session instead of silently skipping required specialist or source-retrieval steps.
 
-You can revoke access in [AI connections](https://aqteron.com/cabinet/connections/ai). Existing published apps remain available after disconnection. Published app links are accessible to anyone who has the link; do not embed private credentials or personal source material in public app files.
+A completed upload alone does not publish the app. The current ZIP limit is 10 MiB; smaller apps are more practical for chunked transfer.
+
+You can revoke access in [AI connections](https://aqteron.com/cabinet/connections/ai). Existing published apps remain available after disconnection.
 
 ## Data handling and support
 
-The plugin declares one remote service: `https://aqteron.com/mcp`. It provides platform instructions and, after OAuth authorization, your app metadata, ZIP uploads and publication results. The included Python helper reads a ZIP locally and emits chunks; it contains no network client. The plugin has no separate telemetry endpoint. Claude's own data processing is governed by your agreement with Anthropic.
+The plugin declares one remote service: `https://aqteron.com/mcp`. It provides platform instructions and, after OAuth authorization, your app metadata, retained version/source metadata, ZIP uploads and publication results. The included Python helper reads a ZIP locally and emits chunks; it contains no network client. The plugin has no separate telemetry endpoint. Claude's own data processing is governed by your agreement with Anthropic.
 
-For setup problems, see the installation guide. Report reproducible non-sensitive issues in this repository. Never post passwords, tokens, cookies, private app ZIPs or user data in public issues. Aqteron is operated by EIREEN Tech (France). Read the [privacy policy](https://aqteron.com/privacy), also available in [Russian](https://aqteron.com/privacy?lang=ru) and [French](https://aqteron.com/privacy?lang=fr). For support, privacy requests or non-public security reports, email [contact@aqteron.com](mailto:contact@aqteron.com).
+For setup problems, see the installation guide. Report reproducible non-sensitive issues in this repository. Never post passwords, tokens, cookies, private app ZIPs or user data in public issues. Aqteron is operated by EIREEN Tech (France). Read the [privacy policy](https://aqteron.com/privacy). For support, privacy requests or non-public security reports, email [contact@aqteron.com](mailto:contact@aqteron.com).
 
 ## Release integrity
 
-- Package: `aqteron-claude-0.1.4.zip`
-- Size: **9,666 bytes; six files.**
-- SHA-256: `09c50484b85c530a85514454a2bbf87d2fc7a87f534fbbbf342b9fb9925f38b5`
+- Package: `aqteron-claude-0.1.5.zip`
+- Size: **10,599 bytes; six files.**
+- SHA-256: `1dd04e21152e40138fd576ffc3ca7582dfd51ec532afdca1a01640e18c2f021b`
 - MCP endpoint: `https://aqteron.com/mcp`
-- Plugin path for directory submission: `plugins/aqteron`.
-- Marketplace name: `aqteron`.
+- Plugin path: `plugins/aqteron`
+- Marketplace name: `aqteron`
 
 The plugin retains its original `UNLICENSED` designation. No additional open-source license is granted by this distribution.
 
