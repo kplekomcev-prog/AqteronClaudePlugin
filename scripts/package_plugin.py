@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Reproduce the reviewed 0.1.3 ZIP with Python's standard library."""
+"""Reproduce the reviewed 0.1.5 ZIP with Python's standard library."""
 import argparse
 import hashlib
 import pathlib
 import zipfile
 
-EXPECTED = "54a15d05baf782797d8c308fa0b91317b40b2b3c952d02a56e7fdff3916c1357"
+EXPECTED = "1dd04e21152e40138fd576ffc3ca7582dfd51ec532afdca1a01640e18c2f021b"
 FILES = [".claude-plugin/icon.svg", ".claude-plugin/plugin.json", ".mcp.json", "README.md", "skills/publish-aqteron-app/SKILL.md", "skills/publish-aqteron-app/scripts/zip_chunks.py"]
 
 def main():
@@ -17,7 +17,7 @@ def main():
     assert sorted(str(p.relative_to(source)) for p in source.rglob("*") if p.is_file()) == FILES
     with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for relative in FILES:
-            info = zipfile.ZipInfo("aqteron-claude/" + relative, (2026, 9, 28, 0, 0, 0))
+            info = zipfile.ZipInfo("aqteron-claude/" + relative, (2026, 10, 5, 0, 0, 0))
             info.external_attr = 0o100644 << 16
             archive.writestr(info, (source / relative).read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
     actual = hashlib.sha256(args.output.read_bytes()).hexdigest()
