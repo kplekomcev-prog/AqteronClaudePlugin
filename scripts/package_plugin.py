@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Reproduce the reviewed 0.1.5 ZIP with Python's standard library."""
+"""Reproduce the reviewed 0.1.6 ZIP with Python's standard library."""
 import argparse
 import hashlib
 import pathlib
 import zipfile
 
-EXPECTED = "1dd04e21152e40138fd576ffc3ca7582dfd51ec532afdca1a01640e18c2f021b"
+EXPECTED = "80db2c2ae4442f84b6eb2f936dbc860c5b4057c4bdac4b063c2e12e83c8a0852"
 FILES = [".claude-plugin/icon.svg", ".claude-plugin/plugin.json", ".mcp.json", "README.md", "skills/publish-aqteron-app/SKILL.md", "skills/publish-aqteron-app/scripts/zip_chunks.py"]
 
 def main():
