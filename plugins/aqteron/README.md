@@ -1,12 +1,12 @@
-# Aqteron for Claude · 0.1.6
+# Aqteron for Claude · 0.1.7
 
 Aqteron lets Claude create, validate, publish and update applications in your Aqteron account. Claude reads the current platform instructions and capabilities through MCP, builds a ZIP package, validates it with Aqteron and publishes only when you ask.
 
-Version 0.1.6 keeps the 0.1.5 retained-source update workflow and makes the plugin package fully English for Anthropic Directory presentation.
+Version 0.1.7 retains source-safe updates and adds an efficient, bounded ZIP binary transfer to Aqteron without model-generated base64 chunks.
 
 ## Install in Claude
 
-1. Open **Customize → Plugins → Add → Upload plugin** and select `aqteron-claude-0.1.6.zip`.
+1. Open **Customize → Plugins → Add → Upload plugin** and select `aqteron-claude-0.1.7.zip`.
 2. Open the plugin's **Connectors** tab, choose **Aqteron**, and select **Connect**. The MCP server is `https://aqteron.com/mcp`.
 3. Sign in to your Aqteron account and authorize access. Enter your password only on Aqteron.
 4. Start a new Claude conversation after updating the plugin. A simple first request is: **Show my apps in Aqteron.**
@@ -57,17 +57,9 @@ If the current Claude session does not expose `list_app_versions`, `get_app_sour
 
 ## ZIP transfer and publication
 
-Generated ZIP files can be transferred through:
+The preferred transport is an OAuth-authorized `begin_app_zip_upload`, followed by one HTTPS PUT to the returned short-lived `direct_upload.url` using the included `zip_direct.py` helper. The server checks its exact 10 MiB ceiling and SHA-256. Claude then calls `complete_app_zip_upload` to validate and `deploy_app` to publish only when instructed.
 
-- `begin_app_zip_upload`
-- `append_app_zip_chunk`
-- `complete_app_zip_upload`
-
-The transfer verifies exact byte length and SHA-256 and runs the Aqteron package validator. Completing the upload does not publish the application.
-
-Publication is a separate `deploy_app` action. After publication, Claude can use `get_deploy_status` until a terminal result is returned.
-
-The current ZIP limit is 10 MiB and the standard transfer chunk is 24 KiB.
+The binary PUT is available only if the Claude code sandbox allows HTTPS PUT traffic to aqteron.com. The remote MCP connection itself does not grant sandbox network access. If the sandbox blocks external connections, Claude reports that constraint rather than silently claiming success. Legacy sequential MCP chunks remain a supported but slow fallback.
 
 ## Security and data handling
 
@@ -77,7 +69,7 @@ The only remote MCP service declared by the plugin is:
 
 `https://aqteron.com/mcp`
 
-After OAuth authorization, Aqteron can provide the connected user's application metadata, retained version/source metadata, ZIP validation results and publication results. The bundled Python helper only reads local ZIP files and emits chunk data; it does not make network requests.
+After OAuth authorization, Aqteron can provide the connected user's application metadata, retained version/source metadata, ZIP validation results and publication results. The bundled chunk helper reads local ZIP files and emits chunk data; the optional direct helper sends the selected archive only to an exact Aqteron HTTPS upload ticket after the user has authorized the MCP transfer.
 
 Published application links can be accessible to anyone who has the link. Do not include passwords, tokens or private source material in public application assets.
 
