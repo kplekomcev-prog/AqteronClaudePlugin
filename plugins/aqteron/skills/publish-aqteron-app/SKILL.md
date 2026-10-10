@@ -77,22 +77,27 @@ If any of `list_app_versions`, `get_app_source_zip` or `get_app_source_chunk` is
 
 ## Transfer a ZIP from Claude
 
-Use `begin_app_zip_upload`, `append_app_zip_chunk`, then `complete_app_zip_upload`. This standard MCP route transfers real file bytes without provider-specific attachment URLs. The archive must be accessible to Claude's code/file tools. If file execution is unavailable, say which capability is missing; never fabricate a ZIP, checksum, download URL or successful upload.
+Prefer the **single-request binary upload** when Claude's execution environment has outbound HTTPS PUT access to aqteron.com. This avoids inserting tens or hundreds of base64 chunks into model tool arguments. An MCP connector being connected does not prove that the Claude code sandbox can send HTTP PUT; those are separately managed network permissions.
 
-1. Inspect the finished ZIP with the bundled helper:
+1. Build a genuine ZIP locally and verify its byte count (1..10485760) and SHA-256 using:
    `python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip`
-   It returns filename, byte count, SHA-256 and number of chunks. Resolve the skill directory from its actual installed location; do not guess the user's filesystem paths.
-2. Call `begin_app_zip_upload` with a fresh UUID `idempotency_key`, exact `size_bytes` and `sha256`, and `app_name` matching the archive. For `mode=create`, omit all target identifiers. For `mode=update`, supply the selected `app_id` or `public_token` and `expected_version_id` from the freshly checked app state (null only for an unpublished app).
-3. Keep the returned `transfer_id`, `chunk_bytes` and `next_chunk_index`. For each remaining chunk run:
-   `python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip --transfer-id <returned-id> --chunk-index <next-index>`
-   Pass the resulting JSON unchanged to `append_app_zip_chunk`. Obtain bytes through code, never generate base64 from memory. Send chunks in order; keep binary data out of the user-facing answer. Check that `chunk_bytes` equals the helper's 24576 before starting; if the server changes it, adapt the file reader to the returned value.
-4. Call `complete_app_zip_upload` after all chunks are acknowledged. This verifies size and SHA-256 and runs the existing validator. It returns an `operation_id`; it does not publish.
+   Use the actual installed skill directory; never fabricate a local path or archive.
+2. Call `begin_app_zip_upload` with a fresh unpredictable UUID `idempotency_key`, the exact `size_bytes` and SHA-256, `app_name`, and the correct create/update target. Create mode omits identifiers. Update mode requires the owned app and current `expected_version_id`.
+3. When the result includes `direct_upload.url`, use the bundled helper **from code execution**, substituting the returned URL and the *same* `idempotency_key`:
+   `python3 <this-skill-directory>/scripts/zip_direct.py /absolute/path/app.zip --upload-url <direct_upload.url> --upload-key <idempotency_key>`
+   The helper allows only an Aqteron HTTPS ticket URL, sends local file bytes in one PUT, and checks the exact server-confirmed size and SHA-256. Never expose the upload key, bearer token, file contents or signed upload URLs in user-visible text. Do not use `file://` as `upload_app_zip.app_zip.download_url`.
+4. If byte transfer succeeds, call `complete_app_zip_upload` with its `transfer_id`. This runs the original Aqteron package validator; it does not publish. Only a validated operation may proceed to `deploy_app`.
+5. If the code sandbox reports `403 host not allowed`, or blocks outbound PUT, **do not misreport the MCP connector as disconnected** and do not retry URLs on unapproved third-party file hosts. Advise that the Claude code execution environment must explicitly permit HTTPS PUT to `aqteron.com`. A connected remote MCP tool is not itself a route for local binary file reads. Never claim an unsuccessful PUT succeeded.
 
-Each transfer expires after one hour. The current package maximum is 10 MiB, but chunk transfer through model tool arguments has significant overhead: keep generated assets compact and do not promise a large transfer will fit the current conversation. Stop on a real context/tool limitation with an accurate status and resumable reference.
+### Legacy fallback: MCP chunks
 
-After a lost response, reuse the exact upload key and manifest to resume at `next_chunk_index`. Repeating a chunk requires identical bytes and index; repeating completion uses the same `transfer_id`. A changed archive needs a new upload key. Keep chunks sequential and pace requests to respect the current edge budget. For HTTP 429/503, honor `Retry-After` or use bounded backoff; do not flood retries.
+For clients where `direct_upload` is missing or the code environment cannot make direct requests, `begin_app_zip_upload` → `append_app_zip_chunk` → `complete_app_zip_upload` remains supported. Each part is 24576 raw bytes, base64 encoded. Read one part at a time **from code**, never synthesize base64 with the model:
+`python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip --transfer-id <transfer_id> --chunk-index <next_chunk_index>`
 
-If a client supplies a genuine attachment through `upload_app_zip`, that existing route also works. Do not pass a local sandbox path as its `download_url`; Claude's normal route is the chunk workflow above.
+Pass the exact helper JSON to `append_app_zip_chunk`, advancing only on acknowledgement. If the runtime forces the model to transcribe large tool parameters manually, do not attempt hundreds of expensive and error-prone calls for a large ZIP; clearly report the blocked transport and stop. The transfer lasts one hour; retrying `begin_app_zip_upload` with an unchanged key resumes the same transfer. Matching chunk retries and completing again are idempotent.
+
+When Claude genuinely supplies a supported runtime attachment with a `download_url` and `file_id`, existing `upload_app_zip` is an alternative. A filesystem path inside Claude's code container is **not** a remotely downloadable attachment reference. The ZIP ceiling remains 10 MiB, with independent validation limits for archive members.
+
 
 ## Publish and report
 
