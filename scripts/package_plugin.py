@@ -1,28 +1,43 @@
 #!/usr/bin/env python3
-"""Reproduce the reviewed 0.1.6 ZIP with Python's standard library."""
+"""Build a reproducible Aqteron for Claude 0.1.7 plugin archive."""
 import argparse
 import hashlib
 import pathlib
 import zipfile
 
-EXPECTED = "80db2c2ae4442f84b6eb2f936dbc860c5b4057c4bdac4b063c2e12e83c8a0852"
-FILES = [".claude-plugin/icon.svg", ".claude-plugin/plugin.json", ".mcp.json", "README.md", "skills/publish-aqteron-app/SKILL.md", "skills/publish-aqteron-app/scripts/zip_chunks.py"]
+VERSION = "0.1.7"
+EXPECTED_SHA256 = None  # Pinned to an exact checksum after release-candidate CI.
+ROOT = pathlib.Path(__file__).resolve().parents[1] / "plugins" / "aqteron"
+FILES = sorted([
+    ".claude-plugin/icon.svg",
+    ".claude-plugin/plugin.json",
+    ".mcp.json",
+    "README.md",
+    "skills/publish-aqteron-app/SKILL.md",
+    "skills/publish-aqteron-app/scripts/zip_chunks.py",
+    "skills/publish-aqteron-app/scripts/zip_direct.py",
+])
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=pathlib.Path)
     args = parser.parse_args()
-    source = pathlib.Path(__file__).resolve().parents[1] / "plugins" / "aqteron"
     assert not args.output.exists(), "Refusing to overwrite an existing artifact"
-    assert sorted(str(p.relative_to(source)) for p in source.rglob("*") if p.is_file()) == FILES
+    actual_files = sorted(str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file())
+    assert actual_files == FILES, (actual_files, FILES)
     with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for relative in FILES:
-            info = zipfile.ZipInfo("aqteron-claude/" + relative, (2026, 10, 5, 0, 0, 0))
+            info = zipfile.ZipInfo("aqteron-claude/" + relative, (2026, 10, 10, 0, 0, 0))
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, (source / relative).read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+            archive.writestr(info, (ROOT / relative).read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
     actual = hashlib.sha256(args.output.read_bytes()).hexdigest()
-    if actual != EXPECTED:
-        raise SystemExit("Archive hash changed: " + actual + ". Review the sources or compression runtime before publishing.")
+    if EXPECTED_SHA256 is not None and actual != EXPECTED_SHA256:
+        raise SystemExit("Archive SHA-256 mismatch: " + actual)
+    with zipfile.ZipFile(args.output) as archive:
+        assert archive.testzip() is None, "Archive CRC error"
+        assert len(archive.namelist()) == len(FILES)
+        manifest = archive.read("aqteron-claude/.claude-plugin/plugin.json").decode("utf-8")
+        assert '"version": "' + VERSION + '"' in manifest
     print(actual + "  " + str(args.output))
 
 if __name__ == "__main__":
