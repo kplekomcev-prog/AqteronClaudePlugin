@@ -23,7 +23,8 @@ def main():
     parser.add_argument("output", type=pathlib.Path)
     args = parser.parse_args()
     assert not args.output.exists(), "Refusing to overwrite an existing artifact"
-    actual_files = sorted(str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file())
+    actual_files = sorted(str(p.relative_to(ROOT)) for p in ROOT.rglob("*")
+                          if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc")
     assert actual_files == FILES, (actual_files, FILES)
     with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for relative in FILES:
