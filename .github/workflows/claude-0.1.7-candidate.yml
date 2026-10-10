@@ -1,0 +1,46 @@
+name: Claude 0.1.7 candidate
+on:
+  push:
+    branches:
+      - fix/claude-direct-zip-0.1.7
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out plugin source
+        uses: actions/checkout@v4
+      - name: Verify Python files
+        run: |
+          python3 -m py_compile scripts/package_plugin.py plugins/aqteron/skills/publish-aqteron-app/scripts/zip_chunks.py plugins/aqteron/skills/publish-aqteron-app/scripts/zip_direct.py
+      - name: Build deterministic ZIP twice
+        shell: bash
+        run: |
+          python3 scripts/package_plugin.py /tmp/aqteron-claude-0.1.7-a.zip
+          python3 scripts/package_plugin.py /tmp/aqteron-claude-0.1.7-b.zip
+          cmp /tmp/aqteron-claude-0.1.7-a.zip /tmp/aqteron-claude-0.1.7-b.zip
+          mv /tmp/aqteron-claude-0.1.7-a.zip aqteron-claude-0.1.7.zip
+          sha256sum aqteron-claude-0.1.7.zip
+      - name: Check package manifest and no Cyrillic in instructions
+        run: |
+          python3 - <<'PY'
+          import zipfile,json,re
+          with zipfile.ZipFile("aqteron-claude-0.1.7.zip") as z:
+              assert len(z.namelist())==7
+              files={name:z.read(name) for name in z.namelist()}
+              assert json.loads(files["aqteron-claude/.claude-plugin/plugin.json"])["version"]=="0.1.7"
+              for name,content in files.items():
+                  if name.endswith((".md",".json",".py")):
+                      assert re.search(r"[\u0400-\u04FF]",content.decode("utf-8")) is None,name
+              assert z.testzip() is None
+          PY
+      - name: Upload candidate archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqteron-claude-0.1.7-candidate
+          path: aqteron-claude-0.1.7.zip
+          if-no-files-found: error
+          retention-days: 7
