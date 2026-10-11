@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Build a reproducible Aqteron for Claude 0.1.7 plugin archive."""
+"""Build a reproducible Aqteron for Claude 0.1.8 plugin archive."""
 import argparse
 import hashlib
 import pathlib
 import zipfile
 
-VERSION = "0.1.7"
-EXPECTED_SHA256 = "23909499d195b6c4b24f79fb373edb6f9112a3122c8c96426dbc23b12f0e2d33"
+VERSION = "0.1.8"
+EXPECTED_SHA256 = "2a250c3f8a2edf9d195bc4294b4cabd157af591ede11fb60f3eed7c10b08377a"
 ROOT = pathlib.Path(__file__).resolve().parents[1] / "plugins" / "aqteron"
 FILES = sorted([
     ".claude-plugin/icon.svg",
@@ -28,7 +28,7 @@ def main():
     assert actual_files == FILES, (actual_files, FILES)
     with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for relative in FILES:
-            info = zipfile.ZipInfo("aqteron-claude/" + relative, (2026, 10, 10, 0, 0, 0))
+            info = zipfile.ZipInfo("aqteron-claude/" + relative, (2026, 10, 11, 0, 0, 0))
             info.external_attr = 0o100644 << 16
             archive.writestr(info, (ROOT / relative).read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
     actual = hashlib.sha256(args.output.read_bytes()).hexdigest()
@@ -43,3 +43,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
