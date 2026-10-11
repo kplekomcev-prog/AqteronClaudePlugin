@@ -6,7 +6,7 @@ import pathlib
 import zipfile
 
 VERSION = "0.1.7"
-EXPECTED_SHA256 = "3ff3e747bec2e609df13d54c7d2506aa8091dac91cbb8de63b7c38d8d50fdd67"
+EXPECTED_SHA256 = "23909499d195b6c4b24f79fb373edb6f9112a3122c8c96426dbc23b12f0e2d33"
 ROOT = pathlib.Path(__file__).resolve().parents[1] / "plugins" / "aqteron"
 FILES = sorted([
     ".claude-plugin/icon.svg",

@@ -87,11 +87,23 @@ Prefer the **single-request binary upload** when Claude's execution environment 
    `python3 <this-skill-directory>/scripts/zip_direct.py /absolute/path/app.zip --upload-url <direct_upload.url> --upload-key <idempotency_key>`
    The helper allows only an Aqteron HTTPS ticket URL, sends local file bytes in one PUT, and checks the exact server-confirmed size and SHA-256. Never expose the upload key, bearer token, file contents or signed upload URLs in user-visible text. Do not use `file://` as `upload_app_zip.app_zip.download_url`.
 4. If byte transfer succeeds, call `complete_app_zip_upload` with its `transfer_id`. This runs the original Aqteron package validator; it does not publish. Only a validated operation may proceed to `deploy_app`.
-5. If the code sandbox reports `403 host not allowed`, or blocks outbound PUT, **do not misreport the MCP connector as disconnected** and do not retry URLs on unapproved third-party file hosts. Advise that the Claude code execution environment must explicitly permit HTTPS PUT to `aqteron.com`. A connected remote MCP tool is not itself a route for local binary file reads. Never claim an unsuccessful PUT succeeded.
+5. If outbound PUT is known to be disabled, or the code sandbox reports `403 host not allowed`, use the browser handoff below when `browser_upload.url` is available. Do not require a network-settings change as the only path, misreport the MCP connector as disconnected, or retry unapproved third-party file hosts. A connected remote MCP tool does not itself read local binary files. Never claim an unsuccessful PUT succeeded.
+
+### Browser handoff without Claude network access
+
+Use this when the user wants to keep Claude network settings unchanged and `begin_app_zip_upload` returns `browser_upload.url`.
+
+1. Make the exact verified ZIP available to the user through Claude's supported file-download feature. Keep the same bytes, size, SHA-256, target, idempotency key and transfer ID.
+2. Give the current user the returned Aqteron browser link and a concise instruction: download the ZIP in Claude, open the link, and select that ZIP. State that file selection is required; this is a manual handoff, not an automatic native attachment bridge. The browser sends one binary PUT, verifies the package and displays its operation ID. It does not publish.
+3. Share this short-lived link only with the requesting user. Do not print its ticket separately, copy it to logs/issues, or substitute a third-party destination. Use the server's expiry; links currently last at most 15 minutes. Before completion, repeating `begin_app_zip_upload` with identical inputs and the same key refreshes the link and retires the old link. If the transfer itself expired, recheck the update target and start a new transfer.
+4. After the user reports completion, call `complete_app_zip_upload` for the original transfer; completion is idempotent and returns the existing validated operation. Check exact size and SHA-256 and then use `get_deploy_status` as needed. If bytes are still incomplete, report that state and keep the handoff available instead of claiming success or starting hundreds of chunk calls.
+5. Continue to publication only when the server returns a validated operation and the user's request already authorizes publication. Preserve any original validation-only scope.
+
+If `browser_upload` is absent, state which supported transport remains available. Do not fabricate a browser link or claim that a local Claude path or internal file UUID is a public download URL.
 
 ### Legacy fallback: MCP chunks
 
-For clients where `direct_upload` is missing or the code environment cannot make direct requests, `begin_app_zip_upload` → `append_app_zip_chunk` → `complete_app_zip_upload` remains supported. Each part is 24576 raw bytes, base64 encoded. Read one part at a time **from code**, never synthesize base64 with the model:
+For clients where neither a supported attachment, direct upload nor browser handoff is usable, `begin_app_zip_upload` → `append_app_zip_chunk` → `complete_app_zip_upload` remains supported. Each part is 24576 raw bytes, base64 encoded. Read one part at a time **from code**, never synthesize base64 with the model:
 `python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip --transfer-id <transfer_id> --chunk-index <next_chunk_index>`
 
 Pass the exact helper JSON to `append_app_zip_chunk`, advancing only on acknowledgement. If the runtime forces the model to transcribe large tool parameters manually, do not attempt hundreds of expensive and error-prone calls for a large ZIP; clearly report the blocked transport and stop. The transfer lasts one hour; retrying `begin_app_zip_upload` with an unchanged key resumes the same transfer. Matching chunk retries and completing again are idempotent.

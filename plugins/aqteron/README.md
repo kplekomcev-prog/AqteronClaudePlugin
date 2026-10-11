@@ -2,7 +2,7 @@
 
 Aqteron lets Claude create, validate, publish and update applications in your Aqteron account. Claude reads the current platform instructions and capabilities through MCP, builds a ZIP package, validates it with Aqteron and publishes only when you ask.
 
-Version 0.1.7 retains source-safe updates and adds an efficient, bounded ZIP binary transfer to Aqteron without model-generated base64 chunks.
+This unreleased 0.1.7 test candidate retains source-safe updates and adds whole-file ZIP transfer plus a browser handoff when Claude sandbox network access is disabled. The published 0.1.6 download is unchanged.
 
 ## Install in Claude
 
@@ -59,7 +59,11 @@ If the current Claude session does not expose `list_app_versions`, `get_app_sour
 
 The preferred transport is an OAuth-authorized `begin_app_zip_upload`, followed by one HTTPS PUT to the returned short-lived `direct_upload.url` using the included `zip_direct.py` helper. The server checks its exact 10 MiB ceiling and SHA-256. Claude then calls `complete_app_zip_upload` to validate and `deploy_app` to publish only when instructed.
 
-The binary PUT is available only if the Claude code sandbox allows HTTPS PUT traffic to aqteron.com. The remote MCP connection itself does not grant sandbox network access. If the sandbox blocks external connections, Claude reports that constraint rather than silently claiming success. Legacy sequential MCP chunks remain a supported but slow fallback.
+The binary PUT from code execution requires the Claude sandbox to allow HTTPS PUT to aqteron.com. The remote MCP connection does not grant sandbox network access.
+
+When sandbox network access is disabled, Claude can return the short-lived `browser_upload.url` provided by Aqteron. Download the exact ZIP in Claude, open that link and select the ZIP. The browser uploads the whole file and validates it; Claude can then retrieve the result and publish only within your original request. This route requires manual file selection and does not establish an automatic Claude attachment bridge. Keep the private link in the requesting conversation; it expires after at most 15 minutes.
+
+Legacy sequential MCP chunks remain supported for clients without an appropriate whole-file path. A 10 MiB ZIP needs 427 chunk calls, so this is not a practical default when the model must transcribe every chunk.
 
 ## Security and data handling
 
