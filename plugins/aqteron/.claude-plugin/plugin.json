@@ -1,6 +1,6 @@
 {
   "name": "aqteron",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "description": "Create, validate, publish and safely update applications in your Aqteron account.",
   "author": {
     "name": "EIREEN Tech",
@@ -21,3 +21,4 @@
   "repository": "https://github.com/kplekomcev-prog/AqteronClaudePlugin",
   "termsOfServiceUrl": "https://aqteron.com/terms"
 }
+
