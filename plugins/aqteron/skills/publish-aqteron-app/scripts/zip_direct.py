@@ -38,7 +38,7 @@ def upload(path, url, ticket):
     checksum = hashlib.sha256(data).hexdigest()
     request = urllib.request.Request(url, data=data, method="PUT", headers={
         "Content-Type": "application/zip", "X-Aqteron-Upload-Ticket": ticket,
-        "Accept": "application/json", "User-Agent": "Aqteron-Claude-ZIP/0.1.8"})
+        "Accept": "application/json", "User-Agent": "Aqteron-Claude-ZIP/0.1.9"})
     with urllib.request.build_opener(NoRedirect()).open(request, timeout=120) as response:
         result = json.loads(response.read(16384))
     if (result.get("transfer_id") != transfer or result.get("received_bytes") != size

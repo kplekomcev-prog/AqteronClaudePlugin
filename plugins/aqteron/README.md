@@ -1,12 +1,12 @@
-# Aqteron for Claude · 0.1.8
+# Aqteron for Claude · 0.1.9
 
 Aqteron lets Claude create, validate, publish and update applications in your Aqteron account. Claude reads the current platform instructions and capabilities through MCP, builds a ZIP package, validates it with Aqteron and publishes only when you ask.
 
-Version 0.1.8 makes one direct binary PUT the default ZIP transfer and includes a clear setup guide and manual fallback when Claude blocks outbound file transfer. Source-safe updates and the existing publication scope are preserved.
+Version 0.1.9 requires whole-file ZIP uploads and removes the legacy text/Base64 upload fallback and its helper. One direct binary PUT remains the default; the setup guide and manual whole-ZIP upload remain available when Claude blocks outbound file transfer. Retained-source updates and the existing publication scope are preserved.
 
 ## Install in Claude
 
-1. Open **Customize → Plugins → Add → Upload plugin** and select `aqteron-claude-0.1.8.zip`.
+1. Open **Customize → Plugins → Add → Upload plugin** and select `aqteron-claude-0.1.9.zip`.
 2. Open the plugin's **Connectors** tab, choose **Aqteron**, and select **Connect**. The MCP server is `https://aqteron.com/mcp`.
 3. Sign in to your Aqteron account and authorize access. Enter your password only on Aqteron.
 4. Start a new Claude conversation after updating the plugin. A simple first request is: **Show my apps in Aqteron.**
@@ -71,7 +71,7 @@ The binary PUT from code execution requires the Claude sandbox to allow HTTPS PU
 
 On a blocked outbound request, Claude provides the cabinet setup guide and can return the short-lived `browser_upload.url` provided by Aqteron. Download the exact ZIP in Claude, open that link and select the ZIP. The browser uploads the whole file and validates it; Claude can then retrieve the result and publish only within your original request. This route requires manual file selection and does not establish an automatic Claude attachment bridge. Keep the private link in the requesting conversation; it expires after at most 15 minutes.
 
-Legacy sequential MCP chunks remain supported for clients without an appropriate whole-file path. A 10 MiB ZIP needs 427 chunk calls, so this is not a practical default when the model must transcribe every chunk.
+Do not send archive bytes as text or Base64 or use a legacy chunk-upload tool, even if an older connector catalog still advertises one. Use direct binary PUT, a supported whole-file attachment, or manual upload of the exact ZIP in Aqteron. The bundled `zip_info.py` reports only the local archive filename, byte count and SHA-256.
 
 ## Security and data handling
 
@@ -81,7 +81,7 @@ The only remote MCP service declared by the plugin is:
 
 `https://aqteron.com/mcp`
 
-After OAuth authorization, Aqteron can provide the connected user's application metadata, retained version/source metadata, ZIP validation results and publication results. The bundled chunk helper reads local ZIP files and emits chunk data; the default direct helper sends the selected archive only to an exact Aqteron HTTPS upload ticket after the user has authorized the MCP transfer.
+After OAuth authorization, Aqteron can provide the connected user's application metadata, retained version/source metadata, ZIP validation results and publication results. The metadata helper reads a local ZIP and reports only its filename, byte count and SHA-256. The direct helper sends the selected whole archive only to an exact Aqteron HTTPS upload ticket after the user has authorized the MCP transfer.
 
 Published application links can be accessible to anyone who has the link. Do not include passwords, tokens or private source material in public application assets.
 

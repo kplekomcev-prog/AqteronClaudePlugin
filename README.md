@@ -1,10 +1,10 @@
-# Aqteron for Claude · 0.1.8
+# Aqteron for Claude · 0.1.9
 
 Create, validate, publish and update applications in your own [Aqteron](https://aqteron.com) account from Claude. This repository contains the client plugin and Claude Code marketplace. The remote service is `https://aqteron.com/mcp`.
 
 ## Install and connect
 
-1. Open the [cabinet setup guide](https://aqteron.com/cabinet/?connect=1&provider=claude), choose Claude and download `aqteron-claude-0.1.8.zip`.
+1. Open the [cabinet setup guide](https://aqteron.com/cabinet/?connect=1&provider=claude), choose Claude and download `aqteron-claude-0.1.9.zip`.
 2. In Claude, open Customize → Plugins → Add → Upload plugin. Select the ZIP.
 3. In the plugin’s Connectors tab, choose Aqteron → Connect, sign into your own Aqteron account and authorize access.
 4. In Settings → Capabilities, enable code execution/file creation and network egress, and add `aqteron.com` to allowed domains. Team/Enterprise owners set this in Organization settings → Capabilities.
@@ -25,7 +25,7 @@ Use `/mcp` to sign into Aqteron. Each person uses their own account; no shared c
 
 Claude obtains an account-bound short-lived capability through MCP, sends the real ZIP bytes with one HTTPS PUT and calls complete to validate. The maximum ZIP size is 10 MiB. Publication happens only within the user’s requested scope. A real Claude 10 MiB direct transfer and validation were verified on 2026-10-11; this release also checks receipts and refuses redirects in its helper.
 
-When Claude blocks sandbox egress, the plugin provides the cabinet network instructions and a temporary Aqteron browser upload link. That fallback requires the user to download and select the ZIP; it is not automatic. It never silently replaces a large file upload with hundreds of model-mediated Base64 calls.
+When Claude blocks sandbox egress, the plugin provides the cabinet network instructions and a temporary Aqteron browser upload link. That fallback requires the user to download and select the ZIP; it is not automatic. ZIP upload uses whole files only; text or Base64 chunks are not an upload option, including for small archives or blocked network access.
 
 For updates, the workflow retrieves the retained source ZIP, verifies its size and SHA-256, preserves unrelated features and rechecks the current active version before uploading. See the [plugin README](plugins/aqteron/README.md) for the specialist workflow and data handling.
 
