@@ -77,10 +77,10 @@ If any of `list_app_versions`, `get_app_source_zip` or `get_app_source_chunk` is
 
 ## Transfer a ZIP from Claude
 
-Use **one binary HTTPS PUT as the default upload**. Attempt it once when network availability is unknown; do not ask the user to inspect settings before trying. It requires outbound HTTPS access to aqteron.com from Claude's execution environment. This avoids inserting tens or hundreds of base64 chunks into model tool arguments. An MCP connector being connected does not prove that the Claude code sandbox can send HTTP PUT; those are separately managed network permissions.
+Use **whole-file transfer only**, with one binary HTTPS PUT as the default upload. Never send archive bytes as text or Base64 and never use legacy chunk-upload tools, even for a small ZIP or if a stale connector catalog still advertises them. Attempt it once when network availability is unknown; do not ask the user to inspect settings before trying. It requires outbound HTTPS access to aqteron.com from Claude's execution environment. This avoids inserting tens or hundreds of base64 chunks into model tool arguments. An MCP connector being connected does not prove that the Claude code sandbox can send HTTP PUT; those are separately managed network permissions.
 
 1. Build a genuine ZIP locally and verify its byte count (1..10485760) and SHA-256 using:
-   `python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip`
+   `python3 <this-skill-directory>/scripts/zip_info.py /absolute/path/app.zip`
    Use the actual installed skill directory; never fabricate a local path or archive.
 2. Call `begin_app_zip_upload` with a fresh UUID `idempotency_key`, the exact `size_bytes` and SHA-256, `app_name`, and the correct create/update target. Create mode omits identifiers. Update mode requires the owned app and current `expected_version_id`.
 3. If begin reports `completed` or `received_bytes == size_bytes`, call complete for that same transfer without resending bytes. Otherwise, when the result includes `direct_upload.url`, use the bundled helper **from code execution**, substituting the returned URL and `direct_upload.upload_ticket`:
@@ -89,7 +89,7 @@ Use **one binary HTTPS PUT as the default upload**. Attempt it once when network
 4. If byte transfer succeeds, call `complete_app_zip_upload` with its `transfer_id`. This runs the original Aqteron package validator; it does not publish. Only a validated operation may proceed to `deploy_app`.
 5. On `network_egress_blocked` (including proxy `Tunnel connection failed: 403 Forbidden`), stop PUT retries. In the same response provide the [cabinet setup guide](https://aqteron.com/cabinet/?connect=1&provider=claude) and the returned `browser_upload.url` with the manual steps below. Explain the one-time setup: personal Settings > Capabilities > Code execution and file creation > Allow network egress; add `aqteron.com` to the additional allowed domains. For Team/Enterprise, an owner configures Organization settings > Capabilities. Package-manager-only access without the added domain is insufficient. These settings belong to the user's account or organization; installing Aqteron does not change them for all users. Once settings change, refresh an expired ticket by repeating begin with identical inputs and continue the same transfer.
 6. An Aqteron HTTP 403 `upload_ticket_invalid` is not proof of a Claude network block. Reissue the ticket once using identical begin inputs; if authentication was revoked, reconnect before retrying. On a timeout, first call complete for the same transfer: the PUT may have arrived. If complete says incomplete, one same-byte retry is allowed while the ticket is valid. Never create duplicate apps or deploy on an uncertain upload result.
-7. Do not misreport the connector as disconnected because egress is blocked. Never retry through another host, silently fall back to hundreds of Base64 calls, or claim an unsuccessful PUT succeeded.
+7. Do not misreport the connector as disconnected because egress is blocked. Never retry through another host, switch to text/Base64 uploads, or claim an unsuccessful PUT succeeded.
 
 ### Browser handoff without Claude network access
 
@@ -98,17 +98,12 @@ Use this when the user wants to keep Claude network settings unchanged and `begi
 1. Make the exact verified ZIP available to the user through Claude's supported file-download feature. Keep the same bytes, size, SHA-256, target, idempotency key and transfer ID.
 2. Give the current user the returned Aqteron browser link and a concise instruction: download the ZIP in Claude, open the link, and select that ZIP. State that file selection is required; this is a manual handoff, not an automatic native attachment bridge. The browser sends one binary PUT, verifies the package and displays its operation ID. It does not publish.
 3. Share this short-lived link only with the requesting user. Do not print its ticket separately, copy it to logs/issues, or substitute a third-party destination. Use the server's expiry; links currently last at most 15 minutes. Before completion, repeating `begin_app_zip_upload` with identical inputs and the same key refreshes the link and retires the old link. If the transfer itself expired, recheck the update target and start a new transfer.
-4. After the user reports completion, call `complete_app_zip_upload` for the original transfer; completion is idempotent and returns the existing validated operation. Check exact size and SHA-256 and then use `get_deploy_status` as needed. If bytes are still incomplete, report that state and keep the handoff available instead of claiming success or starting hundreds of chunk calls.
+4. After the user reports completion, call `complete_app_zip_upload` for the original transfer; completion is idempotent and returns the existing validated operation. Check exact size and SHA-256 and then use `get_deploy_status` as needed. If bytes are still incomplete, report that state and keep the handoff available instead of claiming success or switching to text uploads.
 5. Continue to publication only when the server returns a validated operation and the user's request already authorizes publication. Preserve any original validation-only scope.
 
-If `browser_upload` is absent, give the cabinet setup guide and state which supported transport remains available. Do not fabricate a browser link or claim that a local Claude path or internal file UUID is a public download URL.
+If `browser_upload` is absent, provide the exact ZIP through Claude's file-download feature and direct the user to the [Aqteron cabinet](https://aqteron.com/cabinet/) to upload that whole file. Confirm the intended create/update target and the resulting application version before resuming. Do not call complete for a transfer that never received the file. Do not fabricate a browser link or claim that a local Claude path or internal file UUID is a public download URL.
 
-### Legacy fallback: MCP chunks
-
-Only for a small ZIP or an explicit user request, when neither a supported attachment, direct upload nor browser handoff is usable, `begin_app_zip_upload` → `append_app_zip_chunk` → `complete_app_zip_upload` remains supported. Each part is 24576 raw bytes, base64 encoded. Read one part at a time **from code**, never synthesize base64 with the model:
-`python3 <this-skill-directory>/scripts/zip_chunks.py /absolute/path/app.zip --transfer-id <transfer_id> --chunk-index <next_chunk_index>`
-
-Pass the exact helper JSON to `append_app_zip_chunk`, advancing only on acknowledgement. If the runtime forces the model to transcribe large tool parameters manually, do not attempt hundreds of expensive and error-prone calls for a large ZIP; clearly report the blocked transport and stop. The transfer lasts one hour; retrying `begin_app_zip_upload` with an unchanged key resumes the same transfer. Matching chunk retries and completing again are idempotent.
+### Supported runtime attachment
 
 When Claude genuinely supplies a supported runtime attachment with a `download_url` and `file_id`, existing `upload_app_zip` is an alternative. A filesystem path inside Claude's code container is **not** a remotely downloadable attachment reference. The ZIP ceiling remains 10 MiB, with independent validation limits for archive members.
 
